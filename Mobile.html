@@ -1,0 +1,804 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <base target="_top">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>智慧學校會議助理 - 現場錄音收音端</title>
+  <style>
+    :root {
+      --primary: #2563eb;
+      --primary-dark: #1d4ed8;
+      --success: #10b981;
+      --danger: #ef4444;
+      --warning: #f59e0b;
+      --bg: #0f172a;
+      --card-bg: #1e293b;
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-tap-highlight-color: transparent;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    }
+
+    body {
+      background-color: var(--bg);
+      color: var(--text-main);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow-x: hidden;
+      padding-bottom: 24px;
+    }
+
+    /* Top Navigation */
+    .top-bar {
+      background: rgba(30, 41, 59, 0.85);
+      backdrop-filter: blur(12px);
+      padding: 12px 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      position: sticky;
+      top: 0;
+      z-index: 50;
+    }
+    .top-title {
+      font-size: 16px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .status-badge {
+      font-size: 11px;
+      padding: 3px 8px;
+      border-radius: 999px;
+      background: #334155;
+      color: var(--text-muted);
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+    .status-badge.active {
+      background: rgba(16, 185, 129, 0.2);
+      color: #34d399;
+      border: 1px solid rgba(16, 185, 129, 0.4);
+    }
+    .pulse-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: currentColor;
+      animation: pulse 1.5s infinite;
+    }
+
+    /* Main Container */
+    .container {
+      flex: 1;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      max-width: 500px;
+      margin: 0 auto;
+      width: 100%;
+    }
+
+    /* Audio Recording Monitor Card */
+    .monitor-card {
+      background: var(--card-bg);
+      border-radius: 16px;
+      padding: 16px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      position: relative;
+    }
+    .time-display {
+      font-size: 38px;
+      font-weight: 800;
+      font-family: "SF Mono", "Roboto Mono", monospace;
+      letter-spacing: -1px;
+      margin: 8px 0 4px;
+      color: #ffffff;
+    }
+    .segment-info {
+      font-size: 13px;
+      color: var(--text-muted);
+      display: flex;
+      gap: 12px;
+      align-items: center;
+    }
+    .progress-bar-container {
+      width: 100%;
+      height: 6px;
+      background: #334155;
+      border-radius: 999px;
+      margin: 14px 0 10px;
+      overflow: hidden;
+    }
+    .progress-bar-fill {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, #3b82f6, #60a5fa);
+      transition: width 1s linear;
+    }
+
+    /* Audio Visualizer Wave */
+    .vu-meter {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      height: 24px;
+      margin: 6px 0;
+    }
+    .vu-bar {
+      width: 4px;
+      height: 6px;
+      background: #475569;
+      border-radius: 2px;
+      transition: height 0.1s ease;
+    }
+    .vu-bar.active {
+      background: #38bdf8;
+    }
+
+    /* Camera Live View */
+    .camera-card {
+      background: var(--card-bg);
+      border-radius: 16px;
+      overflow: hidden;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      position: relative;
+      display: flex;
+      flex-direction: column;
+    }
+    .camera-view-wrapper {
+      position: relative;
+      width: 100%;
+      padding-top: 56.25%; /* 16:9 ratio */
+      background: #000000;
+      overflow: hidden;
+    }
+    #cameraStream {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+    .camera-overlay-badge {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      background: rgba(0, 0, 0, 0.6);
+      backdrop-filter: blur(4px);
+      padding: 4px 8px;
+      border-radius: 6px;
+      font-size: 11px;
+      color: #f8fafc;
+      pointer-events: none;
+    }
+    .camera-controls {
+      padding: 12px 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: #1e293b;
+    }
+
+    /* Buttons */
+    .btn-main-record {
+      width: 100%;
+      padding: 14px;
+      border-radius: 12px;
+      border: none;
+      font-size: 16px;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      transition: all 0.2s;
+    }
+    .btn-start {
+      background: linear-gradient(135deg, #10b981, #059669);
+      color: white;
+      box-shadow: 0 4px 15px rgba(16, 185, 129, 0.35);
+    }
+    .btn-stop {
+      background: linear-gradient(135deg, #ef4444, #dc2626);
+      color: white;
+      box-shadow: 0 4px 15px rgba(239, 68, 68, 0.35);
+    }
+
+    /* Shutter button (Canvas snapshot) */
+    .btn-shutter {
+      width: 100%;
+      padding: 12px;
+      background: #ffffff;
+      color: #0f172a;
+      border: none;
+      border-radius: 12px;
+      font-size: 15px;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      transition: all 0.15s;
+    }
+    .btn-shutter:active {
+      transform: scale(0.97);
+      background: #e2e8f0;
+    }
+    .btn-shutter:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    /* Log / Status List */
+    .activity-log {
+      background: var(--card-bg);
+      border-radius: 14px;
+      padding: 12px;
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      font-size: 12px;
+    }
+    .log-title {
+      font-weight: 700;
+      color: var(--text-muted);
+      margin-bottom: 8px;
+      display: flex;
+      justify-content: space-between;
+    }
+    .log-content {
+      max-height: 120px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      color: #cbd5e1;
+    }
+    .log-item {
+      padding: 4px 6px;
+      border-radius: 4px;
+      background: rgba(255, 255, 255, 0.03);
+      display: flex;
+      justify-content: space-between;
+    }
+
+    /* Shutter Flash Animation */
+    .flash {
+      position: absolute;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background: white;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.1s ease-out;
+      z-index: 20;
+    }
+    .flash.active {
+      opacity: 0.8;
+      transition: none;
+    }
+
+    /* Hidden Canvas for lossless JPEG compression */
+    #hiddenCanvas {
+      display: none;
+    }
+
+    @keyframes pulse {
+      0% { transform: scale(0.95); opacity: 0.8; }
+      50% { transform: scale(1.15); opacity: 1; }
+      100% { transform: scale(0.95); opacity: 0.8; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top bar -->
+  <div class="top-bar">
+    <div class="top-title">
+      <span>🏫</span> 智慧學校會議錄音
+    </div>
+    <div id="statusBadge" class="status-badge">
+      <div class="pulse-dot"></div>
+      <span id="statusText">待命準備</span>
+    </div>
+  </div>
+
+  <div class="container">
+
+    <!-- 1. 錄音監控面板 -->
+    <div class="monitor-card">
+      <div class="segment-info">
+        <span id="segmentLabel">第 1 段 (預計 10 分鐘)</span>
+        <span>•</span>
+        <span id="wakeLockStatus">螢幕防休眠：開啟</span>
+      </div>
+
+      <div class="time-display" id="timerDisplay">00:00</div>
+
+      <!-- VU 音量條動畫 -->
+      <div class="vu-meter">
+        <div class="vu-bar" id="vb1"></div>
+        <div class="vu-bar" id="vb2"></div>
+        <div class="vu-bar" id="vb3"></div>
+        <div class="vu-bar" id="vb4"></div>
+        <div class="vu-bar" id="vb5"></div>
+        <div class="vu-bar" id="vb6"></div>
+        <div class="vu-bar" id="vb7"></div>
+      </div>
+
+      <!-- 10 分鐘切分進度條 -->
+      <div class="progress-bar-container">
+        <div class="progress-bar-fill" id="segmentProgress"></div>
+      </div>
+
+      <p style="font-size:11px; color:#64748b;">
+        每 10 分鐘自動分段傳送，亦支援電腦端即時手動切分
+      </p>
+    </div>
+
+    <!-- 2. 主要啟動 / 結束會議按鈕 -->
+    <button id="btnMainRecord" class="btn-main-record btn-start" onclick="toggleMeetingSession()">
+      <span>▶</span> 開始會議錄音收音
+    </button>
+
+    <!-- 3. 相機影像預覽與快門截圖 (不中斷音訊) -->
+    <div class="camera-card">
+      <div class="camera-view-wrapper">
+        <video id="cameraStream" autoplay playsinline muted></video>
+        <div class="camera-overlay-badge">📷 會議現場無縫拍攝</div>
+        <div id="shutterFlash" class="flash"></div>
+      </div>
+
+      <div class="camera-controls">
+        <button id="btnSnapshot" class="btn-shutter" onclick="captureAndUploadPhoto()" disabled>
+          <span>📸</span> 拍攝照片並上傳至雲端
+        </button>
+      </div>
+    </div>
+
+    <!-- 4. 即時通訊與上傳記錄 -->
+    <div class="activity-log">
+      <div class="log-title">
+        <span>📋 系統連線與上傳歷程</span>
+        <span id="photoCount">照片: 0 張</span>
+      </div>
+      <div class="log-content" id="logContainer">
+        <div class="log-item">
+          <span>系統就緒，等待開始...</span>
+          <span>OK</span>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- 用於無音訊中斷截圖之隱藏 Canvas -->
+  <canvas id="hiddenCanvas"></canvas>
+
+  <script>
+    // ==========================================================================
+    // 狀態變數
+    // ==========================================================================
+    let isRecording = false;
+    let mediaStream = null;
+    let mediaRecorder = null;
+    let recordedChunks = [];
+    let wakeLock = null;
+    
+    let segmentIndex = 1;
+    let segmentSeconds = 0;
+    const SEGMENT_DURATION = 600; // 10 分鐘 (600 秒)
+    
+    let timerInterval = null;
+    let pollingInterval = null;
+    let vuInterval = null;
+    let photoCounter = 0;
+
+    const SEGMENT_LABEL = document.getElementById('segmentLabel');
+    const TIMER_DISPLAY = document.getElementById('timerDisplay');
+    const PROGRESS_BAR = document.getElementById('segmentProgress');
+    const BTN_MAIN = document.getElementById('btnMainRecord');
+    const BTN_SNAPSHOT = document.getElementById('btnSnapshot');
+    const STATUS_BADGE = document.getElementById('statusBadge');
+    const STATUS_TEXT = document.getElementById('statusText');
+    const LOG_CONTAINER = document.getElementById('logContainer');
+    const VIDEO_ELEM = document.getElementById('cameraStream');
+    const HIDDEN_CANVAS = document.getElementById('hiddenCanvas');
+    const FLASH_ELEM = document.getElementById('shutterFlash');
+
+    // ==========================================================================
+    // 記錄記錄器
+    // ==========================================================================
+    function addLog(msg, status = 'OK') {
+      const item = document.createElement('div');
+      item.className = 'log-item';
+      const time = new Date().toLocaleTimeString('zh-TW', { hour12: false });
+      item.innerHTML = `<span>[${time}] ${msg}</span><span>${status}</span>`;
+      LOG_CONTAINER.prepend(item);
+    }
+
+    // ==========================================================================
+    // 螢幕防休眠 (Screen Wake Lock API)
+    // ==========================================================================
+    async function enableWakeLock() {
+      if ('wakeLock' in navigator) {
+        try {
+          wakeLock = await navigator.wakeLock.request('screen');
+          document.getElementById('wakeLockStatus').innerText = '螢幕常亮：已鎖定';
+          wakeLock.addEventListener('release', () => {
+            document.getElementById('wakeLockStatus').innerText = '螢幕常亮：釋放';
+          });
+        } catch (err) {
+          console.warn('WakeLock failed:', err);
+        }
+      }
+    }
+
+    // ==========================================================================
+    // 取得最佳音訊格式 (支援 iOS Safari mp4 與 Android webm)
+    // ==========================================================================
+    function getSupportedAudioMimeType() {
+      const types = [
+        'audio/webm;codecs=opus',
+        'audio/webm',
+        'audio/mp4',
+        'audio/aac',
+        'audio/ogg'
+      ];
+      for (const t of types) {
+        if (window.MediaRecorder && MediaRecorder.isTypeSupported(t)) {
+          return t;
+        }
+      }
+      return 'audio/webm'; // fallback
+    }
+
+    // ==========================================================================
+    // 會議錄音啟動 / 結束切換
+    // ==========================================================================
+    async function toggleMeetingSession() {
+      if (!isRecording) {
+        await startMeeting();
+      } else {
+        await stopMeeting();
+      }
+    }
+
+    async function startMeeting() {
+      try {
+        addLog('正在請求麥克風與相機權限...');
+        
+        // 單一約束取得音訊與相機串流，避免雙重授權中斷
+        mediaStream = await navigator.mediaDevices.getUserMedia({
+          audio: {
+            echoCancellation: true,
+            noiseSuppression: true,
+            autoGainControl: true
+          },
+          video: {
+            facingMode: { ideal: "environment" },
+            width: { ideal: 1280 },
+            height: { ideal: 720 }
+          }
+        });
+
+        // 綁定影像串流至預覽視窗
+        VIDEO_ELEM.srcObject = mediaStream;
+        await VIDEO_ELEM.play();
+
+        // 啟動音訊錄製
+        const mimeType = getSupportedAudioMimeType();
+        const audioTracks = mediaStream.getAudioTracks();
+        const audioStream = new MediaStream(audioTracks);
+
+        mediaRecorder = new MediaRecorder(audioStream, { mimeType: mimeType });
+        recordedChunks = [];
+
+        mediaRecorder.ondataavailable = function(e) {
+          if (e.data && e.data.size > 0) {
+            recordedChunks.push(e.data);
+          }
+        };
+
+        mediaRecorder.onstop = async function() {
+          if (recordedChunks.length > 0) {
+            const audioBlob = new Blob(recordedChunks, { type: mimeType });
+            recordedChunks = [];
+            await uploadAudioSegment(audioBlob, mimeType, segmentIndex);
+          }
+        };
+
+        mediaRecorder.start();
+        isRecording = true;
+        segmentSeconds = 0;
+
+        // UI 狀態更新
+        BTN_MAIN.className = 'btn-main-record btn-stop';
+        BTN_MAIN.innerHTML = '<span>⏹</span> 結束會議並上傳';
+        BTN_SNAPSHOT.disabled = false;
+        STATUS_BADGE.className = 'status-badge active';
+        STATUS_TEXT.innerText = '錄音進行中';
+
+        // 啟用常亮
+        enableWakeLock();
+
+        // 啟動計時器 (每秒累加)
+        timerInterval = setInterval(updateTimer, 1000);
+
+        // 啟動 3 秒輪詢 (檢查電腦端手動切分訊號)
+        pollingInterval = setInterval(pollSplitSignal, 3000);
+
+        // 啟動虛擬 VU 波動條
+        startVuMeter();
+
+        addLog(`錄音與相機串流啟動成功 (${mimeType})`);
+
+      } catch (err) {
+        alert('無法啟動設備權限：' + err.message);
+        addLog('設備存取失敗：' + err.message, 'ERR');
+      }
+    }
+
+    async function stopMeeting() {
+      if (!confirm('確定要結束本次會議並上傳最後音訊嗎？')) return;
+
+      clearInterval(timerInterval);
+      clearInterval(pollingInterval);
+      clearInterval(vuInterval);
+
+      STATUS_TEXT.innerText = '正在上傳最後段落...';
+
+      if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+        mediaRecorder.stop();
+      }
+
+      // 關閉相機與麥克風串流
+      if (mediaStream) {
+        mediaStream.getTracks().forEach(track => track.stop());
+      }
+
+      isRecording = false;
+      BTN_MAIN.className = 'btn-main-record btn-start';
+      BTN_MAIN.innerHTML = '<span>▶</span> 開始新會議錄音';
+      BTN_SNAPSHOT.disabled = true;
+      STATUS_BADGE.className = 'status-badge';
+      STATUS_TEXT.innerText = '已完成會議';
+
+      if (wakeLock) {
+        wakeLock.release();
+        wakeLock = null;
+      }
+
+      addLog('會議已圓滿結束，音訊已全數送出！');
+    }
+
+    // ==========================================================================
+    // 計時器與 10 分鐘分段處理
+    // ==========================================================================
+    function updateTimer() {
+      segmentSeconds++;
+      
+      const mins = Math.floor(segmentSeconds / 60);
+      const secs = segmentSeconds % 60;
+      TIMER_DISPLAY.innerText = `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+
+      // 10 分鐘進度條
+      const pct = Math.min((segmentSeconds / SEGMENT_DURATION) * 100, 100);
+      PROGRESS_BAR.style.width = pct + '%';
+
+      // 滿 10 分鐘 (600 秒) 自動分段
+      if (segmentSeconds >= SEGMENT_DURATION) {
+        triggerSegmentSplit('定時 10 分鐘自動切分');
+      }
+    }
+
+    // 切分音訊段落並接續錄音
+    function triggerSegmentSplit(reason) {
+      addLog(`觸發分段：${reason}`);
+      
+      if (mediaRecorder && mediaRecorder.state === 'recording') {
+        mediaRecorder.stop(); // 觸發 onstop 上傳
+        
+        // 立即重啟下一段錄音
+        setTimeout(() => {
+          if (isRecording) {
+            segmentIndex++;
+            segmentSeconds = 0;
+            SEGMENT_LABEL.innerText = `第 ${segmentIndex} 段 (預計 10 分鐘)`;
+            PROGRESS_BAR.style.width = '0%';
+            mediaRecorder.start();
+            addLog(`已開始第 ${segmentIndex} 段錄製`);
+          }
+        }, 300);
+      }
+    }
+
+    // ==========================================================================
+    // 輪詢電腦端切分訊號 (3 秒一次)
+    // ==========================================================================
+    async function pollSplitSignal() {
+      if (!isRecording) return;
+
+      try {
+        // 若在 GAS 環境中可用 google.script.run，亦支援原生 fetch
+        if (typeof google !== 'undefined' && google.script && google.script.run) {
+          google.script.run
+            .withSuccessHandler(function(res) {
+              if (res && res.split) {
+                triggerSegmentSplit('電腦端手動切分訊號');
+              }
+            })
+            .checkSplitSignal();
+        } else {
+          const res = await fetch('?action=checkSplit');
+          const data = await res.json();
+          if (data && data.split) {
+            triggerSegmentSplit('電腦端手動切分訊號');
+          }
+        }
+      } catch (e) {
+        // 輪詢短暫失敗略過
+      }
+    }
+
+    // ==========================================================================
+    // 音訊轉 Base64 並上傳至 GAS
+    // ==========================================================================
+    async function uploadAudioSegment(blob, mimeType, segNum) {
+      addLog(`第 ${segNum} 段音訊轉檔中...`);
+
+      const reader = new FileReader();
+      reader.readAsDataURL(blob);
+      reader.onloadend = async function() {
+        const base64Audio = reader.result.split(',')[1];
+        
+        const payload = {
+          action: 'uploadAudio',
+          audioBase64: base64Audio,
+          mimeType: mimeType,
+          segmentNumber: segNum,
+          triggerType: '段落切分'
+        };
+
+        try {
+          if (typeof google !== 'undefined' && google.script && google.script.run) {
+            google.script.run
+              .withSuccessHandler(function(res) {
+                addLog(`第 ${segNum} 段 AI 摘要已寫入文件！`);
+              })
+              .withFailureHandler(function(err) {
+                addLog(`第 ${segNum} 段上傳失敗：` + err, 'ERR');
+              })
+              .handleAudioSegmentUpload(payload);
+          } else {
+            const res = await fetch('', {
+              method: 'POST',
+              body: JSON.stringify(payload)
+            });
+            const json = await res.json();
+            if (json.success) {
+              addLog(`第 ${segNum} 段 AI 摘要寫入成功！`);
+            } else {
+              addLog(`上傳回應錯誤：` + json.error, 'ERR');
+            }
+          }
+        } catch (e) {
+          addLog(`音訊網路傳送錯誤：` + e.message, 'ERR');
+        }
+      };
+    }
+
+    // ==========================================================================
+    // 現場照片 Canvas 截圖壓縮上傳 (完全不中斷語音)
+    // ==========================================================================
+    async function captureAndUploadPhoto() {
+      if (!VIDEO_ELEM.videoWidth) {
+        alert('相機影像尚未就緒！');
+        return;
+      }
+
+      // 快門閃爍視覺回饋
+      FLASH_ELEM.classList.add('active');
+      setTimeout(() => FLASH_ELEM.classList.remove('active'), 120);
+
+      // 設定 Canvas 尺寸 (若大於 1280 則等比例縮放至 1280)
+      let w = VIDEO_ELEM.videoWidth;
+      let h = VIDEO_ELEM.videoHeight;
+      const MAX_W = 1280;
+
+      if (w > MAX_W) {
+        h = Math.round((h * MAX_W) / w);
+        w = MAX_W;
+      }
+
+      HIDDEN_CANVAS.width = w;
+      HIDDEN_CANVAS.height = h;
+
+      const ctx = HIDDEN_CANVAS.getContext('2d');
+      ctx.drawImage(VIDEO_ELEM, 0, 0, w, h);
+
+      // JPEG 0.7 品質壓縮 (通常小於 400KB)
+      const dataUrl = HIDDEN_CANVAS.toDataURL('image/jpeg', 0.7);
+
+      photoCounter++;
+      document.getElementById('photoCount').innerText = `照片: ${photoCounter} 張`;
+      addLog(`第 ${photoCounter} 張照片已拍攝，上傳中...`);
+
+      const payload = {
+        action: 'uploadPhoto',
+        imageBase64: dataUrl,
+        timestamp: new Date().toISOString()
+      };
+
+      try {
+        if (typeof google !== 'undefined' && google.script && google.script.run) {
+          google.script.run
+            .withSuccessHandler(function(res) {
+              if (res.success) {
+                addLog(`第 ${photoCounter} 張照片已儲存至雲端！`);
+              } else {
+                addLog(`照片儲存失敗：` + res.error, 'ERR');
+              }
+            })
+            .withFailureHandler(function(err) {
+              addLog(`照片上傳錯誤：` + err, 'ERR');
+            })
+            .handlePhotoUpload(payload);
+        } else {
+          const res = await fetch('', {
+            method: 'POST',
+            body: JSON.stringify(payload)
+          });
+          const json = await res.json();
+          if (json.success) {
+            addLog(`照片 ${json.fileName} 雲端同步完成！`);
+          } else {
+            addLog(`照片上傳錯誤：` + json.error, 'ERR');
+          }
+        }
+      } catch (err) {
+        addLog(`照片網路傳送錯誤：` + err.message, 'ERR');
+      }
+    }
+
+    // ==========================================================================
+    // VU 音量動畫動態模擬
+    // ==========================================================================
+    function startVuMeter() {
+      vuInterval = setInterval(() => {
+        for (let i = 1; i <= 7; i++) {
+          const bar = document.getElementById(`vb${i}`);
+          if (bar) {
+            const h = Math.floor(Math.random() * 20) + 4;
+            bar.style.height = h + 'px';
+            if (h > 12) {
+              bar.classList.add('active');
+            } else {
+              bar.classList.remove('active');
+            }
+          }
+        }
+      }, 120);
+    }
+  </script>
+</body>
+</html>
+

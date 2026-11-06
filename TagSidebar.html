@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <meta charset="utf-8">
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    }
+    body {
+      background-color: #f8fafc;
+      color: #1e293b;
+      padding: 16px;
+      font-size: 13px;
+      line-height: 1.5;
+    }
+    .header {
+      text-align: center;
+      padding-bottom: 14px;
+      margin-bottom: 16px;
+      border-bottom: 2px solid #e2e8f0;
+    }
+    .header h2 {
+      font-size: 16px;
+      font-weight: 700;
+      color: #0f172a;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+    }
+    .header p {
+      font-size: 11px;
+      color: #64748b;
+      margin-top: 4px;
+    }
+    
+    .section-title {
+      font-size: 12px;
+      font-weight: 700;
+      color: #475569;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .card {
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      padding: 12px;
+      margin-bottom: 14px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.03);
+    }
+
+    /* Tag buttons grid */
+    .tag-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6px;
+    }
+    .tag-btn {
+      background: #eff6ff;
+      border: 1px solid #bfdbfe;
+      color: #1d4ed8;
+      padding: 7px 8px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      text-align: left;
+      transition: all 0.15s ease;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .tag-btn:hover {
+      background: #dbeafe;
+      border-color: #93c5fd;
+      transform: translateY(-1px);
+    }
+    .tag-btn:active {
+      transform: translateY(0);
+    }
+    .tag-btn.photo-tag {
+      background: #fdf2f8;
+      border-color: #fbcfe8;
+      color: #be185d;
+    }
+    .tag-btn.photo-tag:hover {
+      background: #fce7f3;
+      border-color: #f9a8d4;
+    }
+
+    /* Custom tag input */
+    .custom-tag-row {
+      display: flex;
+      gap: 6px;
+      margin-top: 8px;
+    }
+    .custom-input {
+      flex: 1;
+      padding: 6px 10px;
+      border: 1px solid #cbd5e1;
+      border-radius: 6px;
+      font-size: 12px;
+      outline: none;
+    }
+    .custom-input:focus {
+      border-color: #3b82f6;
+      box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.15);
+    }
+    .custom-add-btn {
+      background: #3b82f6;
+      color: #ffffff;
+      border: none;
+      padding: 6px 12px;
+      border-radius: 6px;
+      font-weight: 600;
+      font-size: 12px;
+      cursor: pointer;
+    }
+    .custom-add-btn:hover {
+      background: #2563eb;
+    }
+
+    /* Action buttons */
+    .action-btn {
+      width: 100%;
+      padding: 10px;
+      border: none;
+      border-radius: 6px;
+      font-weight: 600;
+      font-size: 13px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      margin-bottom: 8px;
+      transition: all 0.2s;
+    }
+    .action-btn.primary {
+      background: #0284c7;
+      color: #ffffff;
+    }
+    .action-btn.primary:hover {
+      background: #0369a1;
+    }
+    .action-btn.split {
+      background: #f59e0b;
+      color: #ffffff;
+    }
+    .action-btn.split:hover {
+      background: #d97706;
+    }
+    .action-btn.table {
+      background: #10b981;
+      color: #ffffff;
+    }
+    .action-btn.table:hover {
+      background: #059669;
+    }
+    .action-btn:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+
+    /* Notification message */
+    #statusToast {
+      display: none;
+      padding: 8px 10px;
+      border-radius: 6px;
+      font-size: 11.5px;
+      margin-top: 10px;
+      text-align: center;
+      animation: fadeIn 0.2s;
+    }
+    .toast-success {
+      background: #dcfce7;
+      color: #166534;
+      border: 1px solid #bbf7d0;
+    }
+    .toast-error {
+      background: #fee2e2;
+      color: #991b1b;
+      border: 1px solid #fecaca;
+    }
+    .toast-info {
+      background: #e0f2fe;
+      color: #075985;
+      border: 1px solid #bae6fd;
+    }
+
+    .help-tips {
+      font-size: 11px;
+      color: #64748b;
+      line-height: 1.6;
+      background: #f1f5f9;
+      padding: 8px 10px;
+      border-radius: 6px;
+      margin-top: 12px;
+    }
+    .help-tips ul {
+      padding-left: 16px;
+      margin-top: 4px;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(-3px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="header">
+    <h2>✨ AI 標籤工具箱</h2>
+    <p>點選標籤即可精準插入當前滑鼠游標位置</p>
+  </div>
+
+  <!-- 0. 手機連線 QR Code (Vercel PWA) -->
+  <div class="card" style="border-color:#c7d2fe; background:#f5f3ff;">
+    <div class="section-title" style="color:#4338ca;">📱 手機端連線 (Vercel PWA)</div>
+    <p style="font-size:11px; color:#6366f1; margin-bottom:8px;">
+      手機相機掃描下方 QR Code，立即開啟 Vercel Web App 進行收音與拍照：
+    </p>
+    <button class="action-btn" style="background:#6366f1; color:white;" onclick="generateConnectionQr()">
+      <span>📷</span> 顯示手機連線 QR Code
+    </button>
+    <div id="qrContainer" style="display:none; text-align:center; margin-top:10px; padding:10px; background:#ffffff; border-radius:8px; border:1px solid #e0e7ff;">
+      <img id="qrImage" src="" alt="連線 QR Code" style="width:160px; height:160px; border-radius:6px; margin:0 auto; display:block;">
+      <p id="qrUrlText" style="font-size:10px; color:#475569; margin-top:6px; word-break:break-all;"></p>
+    </div>
+  </div>
+
+  <!-- 1. 會議常用文字標籤 -->
+  <div class="card">
+    <div class="section-title">📌 常用會議文字標籤</div>
+    <div class="tag-grid">
+      <button class="tag-btn" onclick="insertTag('主席致詞')">
+        <span>🗣️</span> {{主席致詞}}
+      </button>
+      <button class="tag-btn" onclick="insertTag('處室報告')">
+        <span>🏢</span> {{處室報告}}
+      </button>
+      <button class="tag-btn" onclick="insertTag('討論與決議')">
+        <span>⚖️</span> {{討論與決議}}
+      </button>
+      <button class="tag-btn" onclick="insertTag('待辦事項')">
+        <span>✅</span> {{待辦事項}}
+      </button>
+    </div>
+
+    <!-- 自訂標籤輸入 -->
+    <div class="custom-tag-row">
+      <input type="text" id="customTagName" class="custom-input" placeholder="輸入自訂標籤 (如: 臨時動議)">
+      <button class="custom-add-btn" onclick="insertCustomTag()">插入</button>
+    </div>
+  </div>
+
+  <!-- 2. 照片與圖說標籤 -->
+  <div class="card">
+    <div class="section-title">📸 現場照片與圖說標籤</div>
+    <div class="tag-grid">
+      <button class="tag-btn photo-tag" onclick="insertTag('會議照片1')">
+        <span>🖼️</span> {{會議照片1}}
+      </button>
+      <button class="tag-btn photo-tag" onclick="insertTag('圖說1')">
+        <span>✍️</span> {{圖說1}}
+      </button>
+      <button class="tag-btn photo-tag" onclick="insertTag('會議照片2')">
+        <span>🖼️</span> {{會議照片2}}
+      </button>
+      <button class="tag-btn photo-tag" onclick="insertTag('圖說2')">
+        <span>✍️</span> {{圖說2}}
+      </button>
+    </div>
+    <p style="font-size:11px; color:#9d174d; margin-top:6px;">
+      * 一鍵排版時，照片將自動縮放為 220px，圖說由 AI 依畫面生成。
+    </p>
+  </div>
+
+  <!-- 3. 會議控制快捷操作 -->
+  <div class="card">
+    <div class="section-title">⚡ 會議控制與自動化</div>
+    
+    <button class="action-btn split" id="btnSplit" onclick="triggerManualSplit()">
+      <span>✂️</span> 手動切分段落 (通知手機)
+    </button>
+    
+    <button class="action-btn primary" id="btnAutoFormat" onclick="triggerAutoFormat()">
+      <span>⚡</span> 一鍵自動排版與置換照片
+    </button>
+
+    <button class="action-btn table" onclick="triggerInsertTable()">
+      <span>📋</span> 插入學校標準四欄表格
+    </button>
+  </div>
+
+  <!-- 狀態回饋提示 -->
+  <div id="statusToast"></div>
+
+  <!-- 使用說明 -->
+  <div class="help-tips">
+    <b>💡 操作提示：</b>
+    <ul>
+      <li>先在文件中點擊儲存格讓游標定位，再點擊標籤。</li>
+      <li>「手動切分」會即時通知手機端將當前 10 分鐘音訊提早上傳並開始新段落。</li>
+      <li>散會後點擊「一鍵自動排版」，AI 將動態掃描所有標籤並一次性填妥！</li>
+    </ul>
+  </div>
+
+  <script>
+    function generateConnectionQr() {
+      const container = document.getElementById('qrContainer');
+      const qrImg = document.getElementById('qrImage');
+      const qrText = document.getElementById('qrUrlText');
+      showToast('正在產生連線 QR Code...', 'info');
+
+      google.script.run
+        .withSuccessHandler(function(info) {
+          if (!info || !info.webAppUrl) {
+            showToast('⚠️ 尚未取得 GAS 網址，請確認已在右上角點選「部署」發布為 Web 應用程式！', 'error');
+            return;
+          }
+          const vercelBase = info.vercelUrl || 'https://smart-meeting-system.vercel.app';
+          const fullUrl = vercelBase + '/?gasUrl=' + encodeURIComponent(info.webAppUrl);
+          const qrApiUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=220x220&margin=8&data=' + encodeURIComponent(fullUrl);
+          
+          qrImg.src = qrApiUrl;
+          qrText.innerText = fullUrl;
+          container.style.display = 'block';
+          showToast('✅ QR Code 已產生，請用手機相機掃描！', 'success');
+        })
+        .withFailureHandler(function(err) {
+          showToast('產生失敗：' + err.toString(), 'error');
+        })
+        .getSystemConnectionInfo();
+    }
+
+    function showToast(message, type) {
+      const toast = document.getElementById('statusToast');
+      toast.className = 'toast-' + type;
+      toast.innerText = message;
+      toast.style.display = 'block';
+      setTimeout(() => {
+        toast.style.display = 'none';
+      }, 4000);
+    }
+
+    function insertTag(tagName) {
+      google.script.run
+        .withSuccessHandler(function(res) {
+          if (res.success) {
+            showToast(res.message, 'success');
+          } else {
+            showToast(res.message, 'error');
+          }
+        })
+        .withFailureHandler(function(err) {
+          showToast('插入錯誤：' + err.toString(), 'error');
+        })
+        .insertTagAtCursor(tagName);
+    }
+
+    function insertCustomTag() {
+      const input = document.getElementById('customTagName');
+      const val = input.value.trim().replace(/[{}]/g, '');
+      if (!val) {
+        showToast('請輸入自訂標籤名稱！', 'error');
+        return;
+      }
+      insertTag(val);
+      input.value = '';
+    }
+
+    function triggerManualSplit() {
+      const btn = document.getElementById('btnSplit');
+      btn.disabled = true;
+      showToast('正在發送手動切分訊號至手機端...', 'info');
+
+      google.script.run
+        .withSuccessHandler(function(res) {
+          btn.disabled = false;
+          showToast(res.message, 'success');
+        })
+        .withFailureHandler(function(err) {
+          btn.disabled = false;
+          showToast('訊號發送失敗：' + err.toString(), 'error');
+        })
+        .triggerManualSplit();
+    }
+
+    function triggerAutoFormat() {
+      const btn = document.getElementById('btnAutoFormat');
+      btn.disabled = true;
+      showToast('AI 正在分析全文字稿與最新照片，請稍候...', 'info');
+
+      google.script.run
+        .withSuccessHandler(function() {
+          btn.disabled = false;
+          showToast('✅ 自動排版完成！', 'success');
+        })
+        .withFailureHandler(function(err) {
+          btn.disabled = false;
+          showToast('排版失敗：' + err.toString(), 'error');
+        })
+        .generateFinalMinutesDynamic();
+    }
+
+    function triggerInsertTable() {
+      google.script.run
+        .withSuccessHandler(function() {
+          showToast('✅ 已插入學校標準會議表格！', 'success');
+        })
+        .withFailureHandler(function(err) {
+          showToast('表格插入失敗：' + err.toString(), 'error');
+        })
+        .insertStandardTable();
+    }
+  </script>
+</body>
+</html>
+

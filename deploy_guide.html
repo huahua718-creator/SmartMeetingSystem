@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="utf-8">
+  <title>智慧學校會議系統 - 視覺化部署與設定助手</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    :root {
+      --primary: #2563eb;
+      --primary-hover: #1d4ed8;
+      --bg: #f8fafc;
+      --card-bg: #ffffff;
+      --text: #0f172a;
+      --text-muted: #64748b;
+      --border: #e2e8f0;
+      --success: #10b981;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    body { background: var(--bg); color: var(--text); padding: 32px 20px; line-height: 1.6; }
+    .container { max-width: 900px; margin: 0 auto; }
+    header { text-align: center; margin-bottom: 36px; }
+    h1 { font-size: 28px; font-weight: 800; color: #1e3a8a; margin-bottom: 8px; }
+    p.lead { font-size: 15px; color: var(--text-muted); }
+
+    .step-card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 24px;
+      margin-bottom: 24px;
+      box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
+    }
+    .step-header { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
+    .step-num {
+      background: var(--primary);
+      color: white;
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 15px;
+      flex-shrink: 0;
+    }
+    .step-title { font-size: 18px; font-weight: 700; color: #1e293b; }
+
+    .code-box-wrapper {
+      margin-top: 14px;
+      position: relative;
+    }
+    .code-box-header {
+      background: #1e293b;
+      color: #94a3b8;
+      padding: 8px 16px;
+      font-size: 12px;
+      font-family: monospace;
+      border-radius: 8px 8px 0 0;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .copy-btn {
+      background: #3b82f6;
+      color: white;
+      border: none;
+      padding: 4px 12px;
+      border-radius: 4px;
+      font-size: 11px;
+      cursor: pointer;
+      font-weight: 600;
+      transition: background 0.15s;
+    }
+    .copy-btn:hover { background: #2563eb; }
+    pre {
+      background: #0f172a;
+      color: #f1f5f9;
+      padding: 16px;
+      border-radius: 0 0 8px 8px;
+      overflow-x: auto;
+      font-size: 12px;
+      max-height: 220px;
+      line-height: 1.45;
+    }
+
+    ul, ol { padding-left: 20px; margin: 10px 0; }
+    li { margin-bottom: 6px; }
+    .badge { background: #e0f2fe; color: #0369a1; padding: 2px 8px; border-radius: 4px; font-size: 12px; font-weight: 600; }
+    .alert-box { background: #eff6ff; border-left: 4px solid #3b82f6; padding: 12px 16px; border-radius: 0 6px 6px 0; margin-top: 12px; font-size: 13px; color: #1e40af; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>🏫 智慧學校會議紀錄系統 - 快速部署面板</h1>
+      <p class="lead">此工具已將您所需的 Google Apps Script 程式碼全數備妥，請按以下 4 步完成設定。</p>
+    </header>
+
+    <!-- 步驟 1 -->
+    <div class="step-card">
+      <div class="step-header">
+        <div class="step-num">1</div>
+        <div class="step-title">建立 Google Drive 資料夾並取得 ID</div>
+      </div>
+      <p>請前往您的 Google Drive 建立兩個資料夾：</p>
+      <ul>
+        <li><code>會議照片專區</code>：點進資料夾，網址最後面的字串即為 <span class="badge">PHOTO_FOLDER_ID</span>。</li>
+        <li><code>會議範本庫</code>：點進資料夾，網址最後面的字串即為 <span class="badge">TEMPLATE_FOLDER_ID</span>。</li>
+        <li>前往 <a href="https://aistudio.google.com/" target="_blank">Google AI Studio</a> 點選「Get API key」取得免費的 <span class="badge">GEMINI_API_KEY</span>。</li>
+      </ul>
+    </div>
+
+    <!-- 步驟 2 -->
+    <div class="step-card">
+      <div class="step-header">
+        <div class="step-num">2</div>
+        <div class="step-title">建立 Google Docs 並開啟 Apps Script</div>
+      </div>
+      <ol>
+        <li>在 Google Drive 建立一份新的 Google Docs 文件。</li>
+        <li>點擊選單列上的 <b>「擴充功能」</b> > <b>「Apps Script」</b>。</li>
+        <li>點擊左側 ⚙️ <b>「專案設定」</b>，勾選 <b>「在編輯器中顯示『appsscript.json』資訊清單檔案」</b>。</li>
+      </ol>
+    </div>
+
+    <!-- 步驟 3 -->
+    <div class="step-card">
+      <div class="step-header">
+        <div class="step-num">3</div>
+        <div class="step-title">貼上專案檔案內容</div>
+      </div>
+      <p>請依序建立與覆蓋以下 4 個檔案：</p>
+
+      <!-- appsscript.json -->
+      <div class="code-box-wrapper">
+        <div class="code-box-header">
+          <span>appsscript.json (覆蓋專案設定內的 appsscript.json)</span>
+          <button class="copy-btn" onclick="copyCode('code-appsscript')">複製內容</button>
+        </div>
+        <pre><code id="code-appsscript">{
+  "timeZone": "Asia/Taipei",
+  "dependencies": {},
+  "exceptionLogging": "STACKDRIVER",
+  "runtimeVersion": "V8",
+  "oauthScopes": [
+    "https://www.googleapis.com/auth/documents",
+    "https://www.googleapis.com/auth/drive",
+    "https://www.googleapis.com/auth/script.external_request"
+  ],
+  "webapp": {
+    "executeAs": "USER_DEPLOYING",
+    "access": "ANYONE"
+  }
+}</code></pre>
+      </div>
+
+      <!-- Code.gs -->
+      <div class="code-box-wrapper" style="margin-top:16px;">
+        <div class="code-box-header">
+          <span>Code.gs (主程式碼 - 內建自動查詢最新 Gemini Flash 版本，並以 gemini-3.6-flash 為備援)</span>
+          <button class="copy-btn" onclick="alert('請直接開啟本資料夾內的 Code.gs 檔案全選複製即可！')">查看檔案</button>
+        </div>
+      </div>
+
+      <!-- TagSidebar.html -->
+      <div class="code-box-wrapper" style="margin-top:16px;">
+        <div class="code-box-header">
+          <span>TagSidebar.html (點選左側「+」>「HTML」，檔名輸入 TagSidebar)</span>
+          <button class="copy-btn" onclick="alert('請直接開啟本資料夾內的 TagSidebar.html 檔案全選複製即可！')">查看檔案</button>
+        </div>
+      </div>
+
+      <!-- Mobile.html -->
+      <div class="code-box-wrapper" style="margin-top:16px;">
+        <div class="code-box-header">
+          <span>Mobile.html (點選左側「+」>「HTML」，檔名輸入 Mobile)</span>
+          <button class="copy-btn" onclick="alert('請直接開啟本資料夾內的 Mobile.html 檔案全選複製即可！')">查看檔案</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 步驟 4 -->
+    <div class="step-card">
+      <div class="step-header">
+        <div class="step-num">4</div>
+        <div class="step-title">發布與部署為 Web 應用程式</div>
+      </div>
+      <ol>
+        <li>點選編輯器右上角 <b>「部署」</b> > <b>「新增部署作業」</b>。</li>
+        <li>類型選擇 <b>「網路應用程式」 (Web app)</b>。</li>
+        <li>執行身分：選擇 <b>「我」</b>；誰可以存取：選擇 <b>「任何人」 (Anyone)</b>。</li>
+        <li>點擊 <b>「部署」</b> 並完成一次性 Google 帳號授權。</li>
+        <li>將產生的 <b>Web App 網址</b> 傳至手機 Safari 或 Chrome，即可開始雙模現場錄音與拍照！</li>
+      </ol>
+
+      <div class="alert-box">
+        🎉 部署完成後，重新整理 Google Docs，頂部選單即會出現 <b>「✨ AI 會議助手」</b>！
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    function copyCode(id) {
+      const code = document.getElementById(id).innerText;
+      navigator.clipboard.writeText(code).then(() => {
+        alert('已複製到剪貼簿！');
+      });
+    }
+  </script>
+</body>
+</html>
+

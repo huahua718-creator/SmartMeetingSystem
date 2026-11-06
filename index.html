@@ -1,0 +1,918 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#1e293b">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <link rel="manifest" href="./manifest.json">
+  <link rel="icon" type="image/svg+xml" href="./icon.svg">
+  <title>智慧學校會議助理 - 現場收音端</title>
+  <style>
+    :root {
+      --primary: #2563eb;
+      --primary-dark: #1d4ed8;
+      --success: #10b981;
+      --danger: #ef4444;
+      --warning: #f59e0b;
+      --bg: #0f172a;
+      --card-bg: #1e293b;
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-tap-highlight-color: transparent;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    }
+
+    body {
+      background-color: var(--bg);
+      color: var(--text-main);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow-x: hidden;
+      padding-bottom: 24px;
+    }
+
+    /* Top Navigation */
+    .top-bar {
+      background: rgba(30, 41, 59, 0.9);
+      backdrop-filter: blur(12px);
+      padding: 12px 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      position: sticky;
+      top: 0;
+      z-index: 50;
+    }
+    .top-title {
+      font-size: 16px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .status-badge {
+      font-size: 11px;
+      padding: 4px 10px;
+      border-radius: 999px;
+      background: #334155;
+      color: var(--text-muted);
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      cursor: pointer;
+    }
+    .status-badge.active {
+      background: rgba(16, 185, 129, 0.2);
+      color: #34d399;
+      border: 1px solid rgba(16, 185, 129, 0.4);
+    }
+    .status-badge.warning {
+      background: rgba(245, 158, 11, 0.2);
+      color: #fbbf24;
+      border: 1px solid rgba(245, 158, 11, 0.4);
+    }
+    .pulse-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: currentColor;
+      animation: pulse 1.5s infinite;
+    }
+
+    /* Main Container */
+    .container {
+      flex: 1;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      max-width: 500px;
+      margin: 0 auto;
+      width: 100%;
+    }
+
+    /* Backend Connection Notice */
+    .backend-banner {
+      background: rgba(37, 99, 235, 0.15);
+      border: 1px solid rgba(59, 130, 246, 0.3);
+      padding: 10px 14px;
+      border-radius: 12px;
+      font-size: 12px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .backend-banner.error {
+      background: rgba(239, 68, 68, 0.15);
+      border-color: rgba(239, 68, 68, 0.3);
+      color: #fca5a5;
+    }
+    .btn-config {
+      background: #2563eb;
+      color: white;
+      border: none;
+      padding: 4px 10px;
+      border-radius: 6px;
+      font-size: 11px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    /* Audio Recording Monitor Card */
+    .monitor-card {
+      background: var(--card-bg);
+      border-radius: 16px;
+      padding: 16px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+    }
+    .time-display {
+      font-size: 40px;
+      font-weight: 800;
+      font-family: "SF Mono", "Roboto Mono", monospace;
+      letter-spacing: -1px;
+      margin: 8px 0 4px;
+      color: #ffffff;
+    }
+    .segment-info {
+      font-size: 13px;
+      color: var(--text-muted);
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+    .progress-bar-container {
+      width: 100%;
+      height: 6px;
+      background: #334155;
+      border-radius: 999px;
+      margin: 12px 0 8px;
+      overflow: hidden;
+    }
+    .progress-bar-fill {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, #3b82f6, #60a5fa);
+      transition: width 1s linear;
+    }
+
+    /* Audio Visualizer Wave */
+    .vu-meter {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      height: 24px;
+      margin: 4px 0;
+    }
+    .vu-bar {
+      width: 4px;
+      height: 6px;
+      background: #475569;
+      border-radius: 2px;
+      transition: height 0.1s ease;
+    }
+    .vu-bar.active {
+      background: #38bdf8;
+    }
+
+    /* Camera Live View */
+    .camera-card {
+      background: var(--card-bg);
+      border-radius: 16px;
+      overflow: hidden;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      position: relative;
+      display: flex;
+      flex-direction: column;
+    }
+    .camera-view-wrapper {
+      position: relative;
+      width: 100%;
+      padding-top: 56.25%; /* 16:9 ratio */
+      background: #000000;
+      overflow: hidden;
+    }
+    #cameraStream {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+    .camera-overlay-badge {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      background: rgba(0, 0, 0, 0.65);
+      backdrop-filter: blur(4px);
+      padding: 4px 8px;
+      border-radius: 6px;
+      font-size: 11px;
+      color: #f8fafc;
+      pointer-events: none;
+    }
+    .camera-controls {
+      padding: 12px 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: #1e293b;
+    }
+
+    /* Buttons */
+    .btn-main-record {
+      width: 100%;
+      padding: 14px;
+      border-radius: 12px;
+      border: none;
+      font-size: 16px;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      transition: all 0.2s;
+    }
+    .btn-start {
+      background: linear-gradient(135deg, #10b981, #059669);
+      color: white;
+      box-shadow: 0 4px 15px rgba(16, 185, 129, 0.35);
+    }
+    .btn-stop {
+      background: linear-gradient(135deg, #ef4444, #dc2626);
+      color: white;
+      box-shadow: 0 4px 15px rgba(239, 68, 68, 0.35);
+    }
+
+    /* Shutter button */
+    .btn-shutter {
+      width: 100%;
+      padding: 12px;
+      background: #ffffff;
+      color: #0f172a;
+      border: none;
+      border-radius: 12px;
+      font-size: 15px;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      transition: all 0.15s;
+    }
+    .btn-shutter:active {
+      transform: scale(0.97);
+      background: #e2e8f0;
+    }
+    .btn-shutter:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    /* Log List */
+    .activity-log {
+      background: var(--card-bg);
+      border-radius: 14px;
+      padding: 12px;
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      font-size: 12px;
+    }
+    .log-title {
+      font-weight: 700;
+      color: var(--text-muted);
+      margin-bottom: 8px;
+      display: flex;
+      justify-content: space-between;
+    }
+    .log-content {
+      max-height: 110px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+      color: #cbd5e1;
+    }
+    .log-item {
+      padding: 4px 6px;
+      border-radius: 4px;
+      background: rgba(255, 255, 255, 0.03);
+      display: flex;
+      justify-content: space-between;
+    }
+
+    /* Flash */
+    .flash {
+      position: absolute;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background: white;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.1s ease-out;
+      z-index: 20;
+    }
+    .flash.active {
+      opacity: 0.8;
+      transition: none;
+    }
+
+    /* Modal for Settings */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0,0,0,0.7);
+      backdrop-filter: blur(4px);
+      z-index: 100;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    .modal-overlay.active {
+      display: flex;
+    }
+    .modal-card {
+      background: #1e293b;
+      border-radius: 16px;
+      padding: 20px;
+      width: 100%;
+      max-width: 420px;
+      border: 1px solid rgba(255,255,255,0.1);
+    }
+    .modal-title {
+      font-size: 16px;
+      font-weight: 700;
+      margin-bottom: 12px;
+      display: flex;
+      justify-content: space-between;
+    }
+    .modal-input {
+      width: 100%;
+      padding: 10px;
+      background: #0f172a;
+      border: 1px solid #334155;
+      color: #ffffff;
+      border-radius: 8px;
+      font-size: 12px;
+      margin: 8px 0 16px;
+      word-break: break-all;
+    }
+    .modal-btns {
+      display: flex;
+      gap: 8px;
+    }
+    .modal-btn {
+      flex: 1;
+      padding: 10px;
+      border-radius: 8px;
+      border: none;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .modal-btn.primary { background: #2563eb; color: white; }
+    .modal-btn.secondary { background: #334155; color: #cbd5e1; }
+
+    #hiddenCanvas { display: none; }
+
+    @keyframes pulse {
+      0% { transform: scale(0.95); opacity: 0.8; }
+      50% { transform: scale(1.15); opacity: 1; }
+      100% { transform: scale(0.95); opacity: 0.8; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top bar -->
+  <div class="top-bar">
+    <div class="top-title">
+      <span>🏫</span> 智慧學校會議助手
+    </div>
+    <div id="statusBadge" class="status-badge" onclick="openConfigModal()">
+      <div class="pulse-dot"></div>
+      <span id="statusText">待命</span>
+    </div>
+  </div>
+
+  <div class="container">
+
+    <!-- 0. 後端 GAS 綁定指示列 -->
+    <div id="backendBanner" class="backend-banner">
+      <span id="backendStatusLabel">🔍 正在檢測會議後端連線...</span>
+      <button class="btn-config" onclick="openConfigModal()">設定連線</button>
+    </div>
+
+    <!-- 1. 錄音監控面板 -->
+    <div class="monitor-card">
+      <div class="segment-info">
+        <span id="segmentLabel">第 1 段 (每 5 分鐘自動摘要)</span>
+        <span>•</span>
+        <span id="wakeLockStatus">防休眠：開啟</span>
+      </div>
+
+      <div class="time-display" id="timerDisplay">00:00</div>
+
+      <!-- VU 音量條 -->
+      <div class="vu-meter">
+        <div class="vu-bar" id="vb1"></div>
+        <div class="vu-bar" id="vb2"></div>
+        <div class="vu-bar" id="vb3"></div>
+        <div class="vu-bar" id="vb4"></div>
+        <div class="vu-bar" id="vb5"></div>
+        <div class="vu-bar" id="vb6"></div>
+        <div class="vu-bar" id="vb7"></div>
+      </div>
+
+      <!-- 5 分鐘分段進度條 -->
+      <div class="progress-bar-container">
+        <div class="progress-bar-fill" id="segmentProgress"></div>
+      </div>
+
+      <p style="font-size:11px; color:#64748b;">
+        每 5 分鐘自動送出摘要至文件，亦支援電腦端即時手動切分
+      </p>
+    </div>
+
+    <!-- 2. 主要按鈕 -->
+    <button id="btnMainRecord" class="btn-main-record btn-start" onclick="toggleMeetingSession()">
+      <span>▶</span> 開始會議錄音收音
+    </button>
+
+    <!-- 3. 相機影像預覽與快門 -->
+    <div class="camera-card">
+      <div class="camera-view-wrapper">
+        <video id="cameraStream" autoplay playsinline muted></video>
+        <div class="camera-overlay-badge">📷 現場拍照 (錄音不中斷)</div>
+        <div id="shutterFlash" class="flash"></div>
+      </div>
+
+      <div class="camera-controls">
+        <button id="btnSnapshot" class="btn-shutter" onclick="captureAndUploadPhoto()" disabled>
+          <span>📸</span> 拍攝照片並上傳至雲端
+        </button>
+      </div>
+    </div>
+
+    <!-- 4. 即時通訊與上傳記錄 -->
+    <div class="activity-log">
+      <div class="log-title">
+        <span>📋 連線與上傳歷程</span>
+        <span id="photoCount">照片: 0 張</span>
+      </div>
+      <div class="log-content" id="logContainer">
+        <div class="log-item">
+          <span>系統就緒，請確認已綁定會議 GAS 網址</span>
+          <span>OK</span>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- 設定 GAS 網址 Modal -->
+  <div id="configModal" class="modal-overlay">
+    <div class="modal-card">
+      <div class="modal-title">
+        <span>🔗 綁定會議 Google Apps Script 後端</span>
+        <span style="cursor:pointer;" onclick="closeConfigModal()">✕</span>
+      </div>
+      <p style="font-size:12px; color:#94a3b8; line-height:1.5;">
+        請貼上您在 Google Docs 部署獲得的 Web App 網址（或使用手機相機掃描 Docs 側邊欄提供的專屬 QR Code）：
+      </p>
+      <input type="url" id="gasUrlInput" class="modal-input" placeholder="https://script.google.com/macros/s/XXXXX/exec">
+      <div class="modal-btns">
+        <button class="modal-btn secondary" onclick="closeConfigModal()">取消</button>
+        <button class="modal-btn primary" onclick="saveGasUrl()">儲存並測試連線</button>
+      </div>
+    </div>
+  </div>
+
+  <canvas id="hiddenCanvas"></canvas>
+
+  <script>
+    // ==========================================================================
+    // 狀態與設定變數
+    // ==========================================================================
+    let gasBackendUrl = "";
+    let isRecording = false;
+    let mediaStream = null;
+    let mediaRecorder = null;
+    let recordedChunks = [];
+    let wakeLock = null;
+    
+    let segmentIndex = 1;
+    let segmentSeconds = 0;
+    const SEGMENT_DURATION = 300; // 5 分鐘 (300 秒，更適合即時性與輕量化傳輸)
+    
+    let timerInterval = null;
+    let pollingInterval = null;
+    let vuInterval = null;
+    let photoCounter = 0;
+
+    const SEGMENT_LABEL = document.getElementById('segmentLabel');
+    const TIMER_DISPLAY = document.getElementById('timerDisplay');
+    const PROGRESS_BAR = document.getElementById('segmentProgress');
+    const BTN_MAIN = document.getElementById('btnMainRecord');
+    const BTN_SNAPSHOT = document.getElementById('btnSnapshot');
+    const STATUS_BADGE = document.getElementById('statusBadge');
+    const STATUS_TEXT = document.getElementById('statusText');
+    const LOG_CONTAINER = document.getElementById('logContainer');
+    const VIDEO_ELEM = document.getElementById('cameraStream');
+    const HIDDEN_CANVAS = document.getElementById('hiddenCanvas');
+    const FLASH_ELEM = document.getElementById('shutterFlash');
+    const BACKEND_BANNER = document.getElementById('backendBanner');
+    const BACKEND_LABEL = document.getElementById('backendStatusLabel');
+
+    // ==========================================================================
+    // 初始化：解析 URL 參數或 localStorage
+    // ==========================================================================
+    window.addEventListener('DOMContentLoaded', () => {
+      const params = new URLSearchParams(window.location.search);
+      const urlGas = params.get('gasUrl');
+      
+      if (urlGas) {
+        gasBackendUrl = decodeURIComponent(urlGas);
+        localStorage.setItem('SMART_MEETING_GAS_URL', gasBackendUrl);
+      } else {
+        gasBackendUrl = localStorage.getItem('SMART_MEETING_GAS_URL') || "";
+      }
+
+      updateBackendUI();
+    });
+
+    function updateBackendUI() {
+      if (gasBackendUrl && gasBackendUrl.startsWith('http')) {
+        BACKEND_BANNER.className = 'backend-banner';
+        BACKEND_LABEL.innerHTML = '🟢 已綁定會議後端 (' + gasBackendUrl.substring(0, 32) + '...)';
+        STATUS_BADGE.className = 'status-badge';
+        STATUS_TEXT.innerText = '待命就緒';
+      } else {
+        BACKEND_BANNER.className = 'backend-banner error';
+        BACKEND_LABEL.innerHTML = '⚠️ 尚未綁定後端！請點右側設定或掃描 Docs QR Code';
+        STATUS_BADGE.className = 'status-badge warning';
+        STATUS_TEXT.innerText = '未綁定後端';
+      }
+    }
+
+    function openConfigModal() {
+      document.getElementById('gasUrlInput').value = gasBackendUrl;
+      document.getElementById('configModal').classList.add('active');
+    }
+    function closeConfigModal() {
+      document.getElementById('configModal').classList.remove('active');
+    }
+    function saveGasUrl() {
+      const val = document.getElementById('gasUrlInput').value.trim();
+      if (!val || !val.startsWith('http')) {
+        alert('請輸入有效的 Google Apps Script Web App 網址！');
+        return;
+      }
+      gasBackendUrl = val;
+      localStorage.setItem('SMART_MEETING_GAS_URL', gasBackendUrl);
+      closeConfigModal();
+      updateBackendUI();
+      addLog('已更新後端連線網址！');
+    }
+
+    function addLog(msg, status = 'OK') {
+      const item = document.createElement('div');
+      item.className = 'log-item';
+      const time = new Date().toLocaleTimeString('zh-TW', { hour12: false });
+      item.innerHTML = `<span>[${time}] ${msg}</span><span>${status}</span>`;
+      LOG_CONTAINER.prepend(item);
+    }
+
+    // ==========================================================================
+    // 跨域傳輸層 (優先透過 Vercel /api/proxy，解決瀏覽器端 CORS 與 302 限制)
+    // ==========================================================================
+    async function sendRequestToGAS(payload) {
+      if (!gasBackendUrl) {
+        throw new Error('未設定 GAS 後端網址');
+      }
+
+      // 檢查是否處於 Vercel 環境 (若有 /api/proxy 路由)
+      try {
+        const proxyUrl = `/api/proxy?gasUrl=${encodeURIComponent(gasBackendUrl)}`;
+        const res = await fetch(proxyUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(payload)
+        });
+        if (res.ok) {
+          return await res.json();
+        }
+      } catch (proxyErr) {
+        console.warn('Vercel proxy not available, falling back to direct fetch:', proxyErr);
+      }
+
+      // Fallback: 直接向 GAS 發送 (使用 text/plain 避免觸發 OPTIONS preflight)
+      const directRes = await fetch(gasBackendUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'text/plain'
+        },
+        body: JSON.stringify(payload)
+      });
+      return await directRes.json();
+    }
+
+    // ==========================================================================
+    // 螢幕常亮 (Screen Wake Lock API)
+    // ==========================================================================
+    async function enableWakeLock() {
+      if ('wakeLock' in navigator) {
+        try {
+          wakeLock = await navigator.wakeLock.request('screen');
+          document.getElementById('wakeLockStatus').innerText = '常亮：鎖定中';
+          wakeLock.addEventListener('release', () => {
+            document.getElementById('wakeLockStatus').innerText = '常亮：已釋放';
+          });
+        } catch (err) {
+          console.warn('WakeLock error:', err);
+        }
+      }
+    }
+
+    function getSupportedAudioMimeType() {
+      const types = [
+        'audio/webm;codecs=opus',
+        'audio/webm',
+        'audio/mp4',
+        'audio/aac',
+        'audio/ogg'
+      ];
+      for (const t of types) {
+        if (window.MediaRecorder && MediaRecorder.isTypeSupported(t)) {
+          return t;
+        }
+      }
+      return 'audio/webm';
+    }
+
+    // ==========================================================================
+    // 會議錄音啟動 / 結束
+    // ==========================================================================
+    async function toggleMeetingSession() {
+      if (!isRecording) {
+        if (!gasBackendUrl) {
+          alert('請先點擊上方「設定連線」輸入或掃描您的 Google Docs 後端網址！');
+          openConfigModal();
+          return;
+        }
+        await startMeeting();
+      } else {
+        await stopMeeting();
+      }
+    }
+
+    async function startMeeting() {
+      try {
+        addLog('正在請求麥克風與相機串流...');
+        
+        mediaStream = await navigator.mediaDevices.getUserMedia({
+          audio: {
+            echoCancellation: true,
+            noiseSuppression: true,
+            autoGainControl: true
+          },
+          video: {
+            facingMode: { ideal: "environment" },
+            width: { ideal: 1280 },
+            height: { ideal: 720 }
+          }
+        });
+
+        VIDEO_ELEM.srcObject = mediaStream;
+        await VIDEO_ELEM.play();
+
+        const mimeType = getSupportedAudioMimeType();
+        const audioTracks = mediaStream.getAudioTracks();
+        const audioStream = new MediaStream(audioTracks);
+
+        mediaRecorder = new MediaRecorder(audioStream, { mimeType: mimeType });
+        recordedChunks = [];
+
+        mediaRecorder.ondataavailable = function(e) {
+          if (e.data && e.data.size > 0) {
+            recordedChunks.push(e.data);
+          }
+        };
+
+        mediaRecorder.onstop = async function() {
+          if (recordedChunks.length > 0) {
+            const audioBlob = new Blob(recordedChunks, { type: mimeType });
+            recordedChunks = [];
+            await uploadAudioSegment(audioBlob, mimeType, segmentIndex);
+          }
+        };
+
+        mediaRecorder.start();
+        isRecording = true;
+        segmentSeconds = 0;
+
+        BTN_MAIN.className = 'btn-main-record btn-stop';
+        BTN_MAIN.innerHTML = '<span>⏹</span> 結束會議並上傳最後段落';
+        BTN_SNAPSHOT.disabled = false;
+        STATUS_BADGE.className = 'status-badge active';
+        STATUS_TEXT.innerText = '錄音中';
+
+        enableWakeLock();
+        timerInterval = setInterval(updateTimer, 1000);
+        pollingInterval = setInterval(pollSplitSignal, 3000);
+        startVuMeter();
+
+        addLog(`錄音與相機啟動成功 (${mimeType})`);
+
+      } catch (err) {
+        alert('無法啟動設備：' + err.message);
+        addLog('設備授權失敗：' + err.message, 'ERR');
+      }
+    }
+
+    async function stopMeeting() {
+      if (!confirm('確定要結束本次會議並上傳最後音訊嗎？')) return;
+
+      clearInterval(timerInterval);
+      clearInterval(pollingInterval);
+      clearInterval(vuInterval);
+
+      STATUS_TEXT.innerText = '上傳中...';
+
+      if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+        mediaRecorder.stop();
+      }
+
+      if (mediaStream) {
+        mediaStream.getTracks().forEach(track => track.stop());
+      }
+
+      isRecording = false;
+      BTN_MAIN.className = 'btn-main-record btn-start';
+      BTN_MAIN.innerHTML = '<span>▶</span> 開始新會議錄音';
+      BTN_SNAPSHOT.disabled = true;
+      STATUS_BADGE.className = 'status-badge';
+      STATUS_TEXT.innerText = '已完成會議';
+
+      if (wakeLock) {
+        wakeLock.release();
+        wakeLock = null;
+      }
+
+      addLog('會議結束，錄音已全數送出！');
+    }
+
+    function updateTimer() {
+      segmentSeconds++;
+      const mins = Math.floor(segmentSeconds / 60);
+      const secs = segmentSeconds % 60;
+      TIMER_DISPLAY.innerText = `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+
+      const pct = Math.min((segmentSeconds / SEGMENT_DURATION) * 100, 100);
+      PROGRESS_BAR.style.width = pct + '%';
+
+      if (segmentSeconds >= SEGMENT_DURATION) {
+        triggerSegmentSplit('5 分鐘自動分段');
+      }
+    }
+
+    function triggerSegmentSplit(reason) {
+      addLog(`觸發分段：${reason}`);
+      if (mediaRecorder && mediaRecorder.state === 'recording') {
+        mediaRecorder.stop();
+        setTimeout(() => {
+          if (isRecording) {
+            segmentIndex++;
+            segmentSeconds = 0;
+            SEGMENT_LABEL.innerText = `第 ${segmentIndex} 段 (每 5 分鐘自動摘要)`;
+            PROGRESS_BAR.style.width = '0%';
+            mediaRecorder.start();
+            addLog(`已開始第 ${segmentIndex} 段錄製`);
+          }
+        }, 300);
+      }
+    }
+
+    async function pollSplitSignal() {
+      if (!isRecording || !gasBackendUrl) return;
+      try {
+        const data = await sendRequestToGAS({ action: 'checkSplit' });
+        if (data && data.split) {
+          triggerSegmentSplit('電腦端手動切分訊號');
+        }
+      } catch (e) {
+        // 略過短暫網路輪詢波動
+      }
+    }
+
+    async function uploadAudioSegment(blob, mimeType, segNum) {
+      addLog(`第 ${segNum} 段音訊壓縮轉檔中...`);
+
+      const reader = new FileReader();
+      reader.readAsDataURL(blob);
+      reader.onloadend = async function() {
+        const base64Audio = reader.result.split(',')[1];
+        const payload = {
+          action: 'uploadAudio',
+          audioBase64: base64Audio,
+          mimeType: mimeType,
+          segmentNumber: segNum,
+          triggerType: '段落切分'
+        };
+
+        try {
+          const res = await sendRequestToGAS(payload);
+          if (res && res.success) {
+            addLog(`第 ${segNum} 段 AI 摘要已寫入文件！`);
+          } else {
+            addLog(`上傳錯誤：` + (res ? res.error : '未知'), 'ERR');
+          }
+        } catch (e) {
+          addLog(`音訊網路傳送錯誤：` + e.message, 'ERR');
+        }
+      };
+    }
+
+    async function captureAndUploadPhoto() {
+      if (!VIDEO_ELEM.videoWidth) {
+        alert('相機影像尚未就緒！');
+        return;
+      }
+
+      FLASH_ELEM.classList.add('active');
+      setTimeout(() => FLASH_ELEM.classList.remove('active'), 120);
+
+      let w = VIDEO_ELEM.videoWidth;
+      let h = VIDEO_ELEM.videoHeight;
+      const MAX_W = 1280;
+      if (w > MAX_W) {
+        h = Math.round((h * MAX_W) / w);
+        w = MAX_W;
+      }
+
+      HIDDEN_CANVAS.width = w;
+      HIDDEN_CANVAS.height = h;
+
+      const ctx = HIDDEN_CANVAS.getContext('2d');
+      ctx.drawImage(VIDEO_ELEM, 0, 0, w, h);
+
+      const dataUrl = HIDDEN_CANVAS.toDataURL('image/jpeg', 0.7);
+
+      photoCounter++;
+      document.getElementById('photoCount').innerText = `照片: ${photoCounter} 張`;
+      addLog(`第 ${photoCounter} 張照片已拍攝，上傳中...`);
+
+      const payload = {
+        action: 'uploadPhoto',
+        imageBase64: dataUrl,
+        timestamp: new Date().toISOString()
+      };
+
+      try {
+        const res = await sendRequestToGAS(payload);
+        if (res && res.success) {
+          addLog(`照片 ${res.fileName} 已儲存至雲端！`);
+        } else {
+          addLog(`照片儲存失敗：` + (res ? res.error : '未知'), 'ERR');
+        }
+      } catch (err) {
+        addLog(`照片傳送錯誤：` + err.message, 'ERR');
+      }
+    }
+
+    function startVuMeter() {
+      vuInterval = setInterval(() => {
+        for (let i = 1; i <= 7; i++) {
+          const bar = document.getElementById(`vb${i}`);
+          if (bar) {
+            const h = Math.floor(Math.random() * 20) + 4;
+            bar.style.height = h + 'px';
+            if (h > 12) {
+              bar.classList.add('active');
+            } else {
+              bar.classList.remove('active');
+            }
+          }
+        }
+      }, 120);
+    }
+  </script>
+</body>
+</html>

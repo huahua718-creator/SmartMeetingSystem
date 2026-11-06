@@ -1,0 +1,16 @@
+{
+  "name": "智慧學校會議錄音助手",
+  "short_name": "會議錄音",
+  "description": "智慧學校會議現場收音、拍照與 AI 即時摘要 PWA 應用程式",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#0f172a",
+  "theme_color": "#1e293b",
+  "icons": [
+    {
+      "src": "icon.svg",
+      "sizes": "192x192 512x512",
+      "type": "image/svg+xml"
+    }
+  ]
+}
